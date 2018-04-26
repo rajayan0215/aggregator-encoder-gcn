@@ -22,6 +22,16 @@ def run_cora():
     random.seed(1)
     num_folds = 100
     num_nodes = 2708
+
+    params = {
+        "num_folds": 100,
+        "num_nodes": 2708,
+        "dim1": 128,
+        "dim2": 128,
+        "learning_rate": 0.5,
+        "lr_decay": 0.005
+    }
+
     feat_data, labels, adj_lists = Cora.load_cora()
 
     data = Data(feat_data, labels, num_nodes, num_folds)
@@ -40,7 +50,10 @@ def run_cora():
 
     model = SupervisedGraphSage(7, enc2)
 
-    optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=0.7)
+    optimizer = torch.optim.ASGD(filter(lambda p: p.requires_grad, model.parameters()),
+                                 lr=params["learning_rate"],
+                                 lambd=params["lr_decay"])
+
     times = []
 
     for f in range(num_folds):
@@ -60,7 +73,8 @@ def run_cora():
 
         val_out = model.forward(data.valid_data[f])
 
-        print(f, loss.data[0], f1_score(data.valid_labels[f].data.numpy(), val_out.data.numpy().argmax(axis=1), average="micro"))
+        print(f, loss.data[0],
+              f1_score(data.valid_labels[f].data.numpy(), val_out.data.numpy().argmax(axis=1), average="micro"))
 
     test_out = model.forward(data.test_data)
     print("Test F1:", f1_score(data.test_labels.data.numpy(), test_out.data.numpy().argmax(axis=1), average="micro"))
