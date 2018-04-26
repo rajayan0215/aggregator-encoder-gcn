@@ -6,11 +6,10 @@ import torch
 import torch.nn as nn
 from comet_ml import Experiment
 from sklearn.metrics import f1_score
-from torch.autograd import Variable
 
-from graphsage.data import Cora
-from graphsage.model import SupervisedGraphSage
+from graphsage.data import Data, Cora
 from graphsage.layers import Encoder, MeanAggregator
+from graphsage.model import SupervisedGraphSage
 
 """
 Simple supervised GraphSAGE model as well as examples running the model
@@ -21,8 +20,11 @@ on the Cora and Pubmed datasets.
 def run_cora():
     np.random.seed(1)
     random.seed(1)
+    num_folds = 100
     num_nodes = 2708
     feat_data, labels, adj_lists = Cora.load_cora()
+
+    data = Data(feat_data, labels, num_nodes, num_folds)
 
     # 2708 papers in dataset, 1433 (vocab of unique words) dimensional embeddings
     features = nn.Embedding(2708, 1433)
@@ -38,27 +40,30 @@ def run_cora():
 
     model = SupervisedGraphSage(7, enc2)
 
-    rand_indices = np.random.permutation(num_nodes)
-    test = rand_indices[:1000]
-    val = rand_indices[1000:1500]
-    train = list(rand_indices[1500:])
-
     optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=0.7)
     times = []
-    for batch in range(100):
-        batch_nodes = train[:256]
-        random.shuffle(train)
-        start_time = time.time()
-        optimizer.zero_grad()
-        loss = model.loss(batch_nodes, Variable(torch.LongTensor(labels[np.array(batch_nodes)])))
-        loss.backward()
-        optimizer.step()
-        end_time = time.time()
-        times.append(end_time - start_time)
-        print(batch, loss.data[0])
 
-    val_output = model.forward(val)
-    print("Validation F1:", f1_score(labels[val], val_output.data.numpy().argmax(axis=1), average="micro"))
+    for f in range(num_folds):
+        time_start = time.time()
+
+        optimizer.zero_grad()
+
+        loss = model.loss(data.train_data[f], data.train_labels[f])
+
+        loss.backward()
+
+        optimizer.step()
+
+        time_end = time.time()
+
+        times.append(time_end - time_start)
+
+        val_out = model.forward(data.valid_data[f])
+
+        print(f, loss.data[0], f1_score(data.valid_labels[f].data.numpy(), val_out.data.numpy().argmax(axis=1), average="micro"))
+
+    test_out = model.forward(data.test_data)
+    print("Test F1:", f1_score(data.test_labels.data.numpy(), test_out.data.numpy().argmax(axis=1), average="micro"))
     print("Average batch time:", np.mean(times))
 
 
