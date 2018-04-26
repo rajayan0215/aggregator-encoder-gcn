@@ -8,13 +8,13 @@ class SupervisedGraphSage(nn.Module):
     Simple supervised GraphSAGE model using CE loss
     """
 
-    def __init__(self, num_classes, enc):
+    def __init__(self, num_classes, encoder):
         super(SupervisedGraphSage, self).__init__()
-        self.enc = enc
+        self.enc = encoder
         self.xent = nn.CrossEntropyLoss()
 
         # registered module parameters
-        self.weight = nn.Parameter(torch.FloatTensor(num_classes, enc.embed_dim))
+        self.weight = nn.Parameter(torch.FloatTensor(num_classes, encoder.embedding_dim))
 
         # to break symmetry between hidden units of the same layer during backpropagation
         # initialize weights using the method described in He, K. et al. (2015) using normal distribution

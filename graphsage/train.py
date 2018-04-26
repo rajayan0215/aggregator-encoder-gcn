@@ -7,8 +7,9 @@ import torch.nn as nn
 from comet_ml import Experiment
 from sklearn.metrics import f1_score
 
-from graphsage.data import Data, Cora
-from graphsage.layers import Encoder, MeanAggregator
+from graphsage.data import Data
+from graphsage.layers import Encoder
+from graphsage.aggregator import MeanAggregator
 from graphsage.model import SupervisedGraphSage
 
 """
@@ -17,46 +18,35 @@ on the Cora and Pubmed datasets.
 """
 
 
-def run_cora():
+def run(param, data_loader):
     np.random.seed(1)
     random.seed(1)
-    num_folds = 100
-    num_nodes = 2708
 
-    params = {
-        "num_folds": 100,
-        "num_nodes": 2708,
-        "dim1": 128,
-        "dim2": 128,
-        "learning_rate": 0.5,
-        "lr_decay": 0.005
-    }
+    feat_data, labels, adj_lists = data_loader()
 
-    feat_data, labels, adj_lists = Cora.load_cora()
-
-    data = Data(feat_data, labels, num_nodes, num_folds)
+    data = Data(feat_data, labels, param["num_nodes"], param["num_folds"])
 
     # 2708 papers in dataset, 1433 (vocab of unique words) dimensional embeddings
-    features = nn.Embedding(2708, 1433)
+    features = nn.Embedding(param["num_nodes"], param["num_features"])
     features.weight = nn.Parameter(torch.FloatTensor(feat_data), requires_grad=False)
 
     # layer 1
-    agg1 = MeanAggregator(features, cuda=True)
-    enc1 = Encoder(adj_lists, agg1, 1433, 128, 10)
+    agg1 = MeanAggregator(features, param["sample1"], cuda=True)
+    enc1 = Encoder(adj_lists, agg1, features.embedding_dim, param["dim1"])
 
     # layer 2
-    agg2 = MeanAggregator(lambda nodes: enc1(nodes).t())
-    enc2 = Encoder(adj_lists, agg2, enc1.embed_dim, 128, 10, base_model=enc1)
+    agg2 = MeanAggregator(lambda nodes: enc1(nodes).t(), param["sample2"])
+    enc2 = Encoder(adj_lists, agg2, enc1.embedding_dim, param["dim2"], base_model=enc1)
 
-    model = SupervisedGraphSage(7, enc2)
+    model = SupervisedGraphSage(param["num_classes"], enc2)
 
     optimizer = torch.optim.ASGD(filter(lambda p: p.requires_grad, model.parameters()),
-                                 lr=params["learning_rate"],
-                                 lambd=params["lr_decay"])
+                                 lr=param["learning_rate"],
+                                 lambd=param["lr_decay"])
 
     times = []
 
-    for f in range(num_folds):
+    for f in range(param["num_folds"]):
         time_start = time.time()
 
         optimizer.zero_grad()
@@ -81,48 +71,35 @@ def run_cora():
     print("Average batch time:", np.mean(times))
 
 
-# def run_pubmed():
-#     np.random.seed(1)
-#     random.seed(1)
-#     num_nodes = 19717
-#     feat_data, labels, adj_lists = load_pubmed()
-#
-#     features = nn.Embedding(19717, 500)
-#     features.weight = nn.Parameter(torch.FloatTensor(feat_data), requires_grad=False)
-#
-#     agg1 = MeanAggregator(features, cuda=True)
-#     enc1 = Encoder(features, 500, 128, adj_lists, agg1, 10)
-#
-#     agg2 = MeanAggregator(lambda nodes: enc1(nodes).t())
-#     enc2 = Encoder(lambda nodes: enc1(nodes).t(), enc1.embed_dim, 128, adj_lists, agg2, 25, base_model=enc1)
-#
-#     graphsage = SupervisedGraphSage(3, enc2)
-#
-#     rand_indices = np.random.permutation(num_nodes)
-#     test = rand_indices[:1000]
-#     val = rand_indices[1000:1500]
-#     train = list(rand_indices[1500:])
-#
-#     optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, graphsage.parameters()), lr=0.7)
-#     times = []
-#     for batch in range(200):
-#         batch_nodes = train[:1024]
-#         random.shuffle(train)
-#         start_time = time.time()
-#         optimizer.zero_grad()
-#         loss = graphsage.loss(batch_nodes,
-#                               Variable(torch.LongTensor(labels[np.array(batch_nodes)])))
-#         loss.backward()
-#         optimizer.step()
-#         end_time = time.time()
-#         times.append(end_time - start_time)
-#         print(batch, loss.data[0])
-#
-#     val_output = graphsage.forward(val)
-#     print("Validation F1:", f1_score(labels[val], val_output.data.numpy().argmax(axis=1), average="micro"))
-#     print("Average batch time:", np.mean(times))
-
-
 if __name__ == "__main__":
     experiment = Experiment(api_key="T89lpyGziH2MDRAfdJ0G0LpSr", project_name="inductivegcn")
-    run_cora()
+
+    param_cora = {
+        "num_classes": 7,
+        "num_nodes": 2708,
+        "num_features": 1433,
+        "num_folds": 100,
+        "dim1": 128,
+        "dim2": 128,
+        "sample1": 10,
+        "sample2": 5,
+        "learning_rate": 0.5,
+        "lr_decay": 0.005
+    }
+
+    param_pubmed = {
+        "num_classes": 3,
+        "num_nodes": 19717,
+        "num_features": 500,
+        "num_folds": 100,
+        "dim1": 128,
+        "dim2": 128,
+        "sample1": 10,
+        "sample2": 25,
+        "learning_rate": 0.7,
+        "lr_decay": 0
+    }
+
+    run(param_cora, Data.load_cora)
+
+    run(param_pubmed, Data.load_pubmed)
