@@ -10,8 +10,10 @@ class Data(object):
     """
     Splits the input data into training and validation sets
     """
-    def __init__(self, features, labels, num_nodes, num_folds):
+    def __init__(self, data_loader, num_nodes, num_folds):
         rand_indices = np.random.permutation(num_nodes)
+
+        self.features, self.labels, self.adj_lists = data_loader()
 
         self.train_data = []
         self.train_labels = []
@@ -20,17 +22,17 @@ class Data(object):
         self.valid_labels = []
 
         self.test_data = rand_indices[1000:]
-        self.test_labels = Variable(torch.LongTensor(labels[np.array(self.test_data)]))
+        self.test_labels = Variable(torch.LongTensor(self.labels[np.array(self.test_data)]))
 
         ss = StratifiedShuffleSplit(n_splits=num_folds, test_size=0.20, random_state=42)
 
         train_indices = rand_indices[:1000]
-        for train_index, valid_index in ss.split(features[train_indices], labels[train_indices]):
+        for train_index, valid_index in ss.split(self.features[train_indices], self.labels[train_indices]):
             self.train_data.append(train_index)
-            self.train_labels.append(Variable(torch.LongTensor(labels[np.array(train_index)])))
+            self.train_labels.append(Variable(torch.LongTensor(self.labels[np.array(train_index)])))
 
             self.valid_data.append(valid_index)
-            self.valid_labels.append(Variable(torch.LongTensor(labels[np.array(valid_index)])))
+            self.valid_labels.append(Variable(torch.LongTensor(self.labels[np.array(valid_index)])))
 
     @staticmethod
     def load_cora():

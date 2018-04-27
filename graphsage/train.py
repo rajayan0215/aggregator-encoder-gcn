@@ -22,21 +22,19 @@ def run(param, data_loader):
     np.random.seed(1)
     random.seed(1)
 
-    feat_data, labels, adj_lists = data_loader()
-
-    data = Data(feat_data, labels, param["num_nodes"], param["num_folds"])
+    data = Data(data_loader, param["num_nodes"], param["num_folds"])
 
     # 2708 papers in dataset, 1433 (vocab of unique words) dimensional embeddings
     features = nn.Embedding(param["num_nodes"], param["num_features"])
-    features.weight = nn.Parameter(torch.FloatTensor(feat_data), requires_grad=False)
+    features.weight = nn.Parameter(torch.FloatTensor(data.features), requires_grad=False)
 
     # layer 1
     agg1 = MeanAggregator(features, param["sample1"], cuda=True)
-    enc1 = Encoder(adj_lists, agg1, features.embedding_dim, param["dim1"])
+    enc1 = Encoder(data.adj_lists, agg1, features.embedding_dim, param["dim1"])
 
     # layer 2
     agg2 = MeanAggregator(lambda nodes: enc1(nodes).t(), param["sample2"])
-    enc2 = Encoder(adj_lists, agg2, enc1.embedding_dim, param["dim2"], base_model=enc1)
+    enc2 = Encoder(data.adj_lists, agg2, enc1.embedding_dim, param["dim2"], base_model=enc1)
 
     model = SupervisedGraphSage(param["num_classes"], enc2)
 
@@ -96,10 +94,10 @@ if __name__ == "__main__":
         "dim2": 128,
         "sample1": 10,
         "sample2": 25,
-        "learning_rate": 0.7,
-        "lr_decay": 0
+        "learning_rate": 0.8,
+        "lr_decay": 0.005
     }
 
-    run(param_cora, Data.load_cora)
+    # run(param_cora, Data.load_cora)
 
     run(param_pubmed, Data.load_pubmed)
