@@ -17,7 +17,7 @@ class MeanAggregator(nn.Module):
     Aggregates using mean of the neighbors embeddings
     """
 
-    def __init__(self, features, num_sample=10, cuda=False):
+    def __init__(self, features, priority_list, num_sample=10, cuda=False):
         """
         Initializes the aggregator for a specific graph.
 
@@ -32,6 +32,7 @@ class MeanAggregator(nn.Module):
         self.features = features
         self.num_samples = num_sample
         self.cuda = cuda
+        self.priority_list = priority_list
 
     def forward(self, nodes, neighbours_full):
         """
@@ -47,7 +48,7 @@ class MeanAggregator(nn.Module):
         """
 
         # draw uniformly samples of size ``num_sample`` from the neighbours set of each node
-        neighbours_sample = uniform_sample(neighbours_full, self.num_samples)
+        neighbours_sample = self.non_uniform_sample(neighbours_full, self.num_samples)
 
         # build neighbourhoods by joining each node with its sampled neighbours
         neighbourhoods = [set(neighbourhood).union([nodes[i]]) for i, neighbourhood in enumerate(neighbours_sample)]
@@ -94,24 +95,50 @@ class MeanAggregator(nn.Module):
 
         return mask
 
+    @staticmethod
+    def uniform_sample(neighbourhoods, num_sample, black_list=[]):
+        """
+        Sampling without replacement
 
-def uniform_sample(neighbourhoods, num_sample):
-    """
-    Sampling without replacement
+        Args:
+            neighbourhoods () :
+            num_sample (int) : Number of items to sample from the 2nd dimension
+            black_list (set, optional) : items to exclude
+        """
+        # local function pointers as a speed hack
+        _set = set
+        _sample = random.sample
 
-    Args:
-        neighbourhoods () :
-        num_sample (int) : Number of items to sample from the 2nd dimension
-    """
-    # local function pointers as a speed hack
-    _set = set
-    _sample = random.sample
+        result = []
+        for i in range(len(neighbourhoods)):
+            neighbourhood = _set(neighbourhoods[i]) - _set(black_list[i])
+            result.append(_sample(neighbourhood, num_sample) if num_sample < len(neighbourhood) else neighbourhood)
 
-    if num_sample is not None:
-        return [_set(_sample(neighbourhood,
-                             num_sample,
-                             )) if len(neighbourhood) >= num_sample else neighbourhood for neighbourhood
-                in
-                neighbourhoods]
-    else:
-        return neighbourhoods
+        return result
+
+    def non_uniform_sample(self, neighbourhoods, num_sample):
+        """
+        Sampling without replacement
+
+        Args:
+            neighbourhoods () :
+            priority_list () :
+            num_sample (int) : Number of items to sample from the 2nd dimension
+        """
+
+        dim = int(num_sample / 2)
+        important_ones = [self.priority_sample(neighbourhood, dim, self.priority_list) for neighbourhood in neighbourhoods]
+        random_ones = self.uniform_sample(neighbourhoods, dim, important_ones)
+        return [list(important_ones[i]) + list(random_ones[i]) for i in range(len(neighbourhoods))]
+
+    def priority_sample(self, neighbourhood, num_samples, priority_list=None):
+        sample = []
+        dim = min(num_samples, len(neighbourhood))
+
+        for i in range(len(priority_list)):
+            if priority_list[i] in neighbourhood:
+                sample.append(priority_list[i])
+                if len(sample) == dim:
+                    return sample
+
+        return sample

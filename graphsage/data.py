@@ -10,6 +10,7 @@ class Data(object):
     """
     Splits the input data into training and validation sets
     """
+
     def __init__(self, data_loader, num_nodes, num_folds):
         rand_indices = np.random.permutation(num_nodes)
 
@@ -24,8 +25,8 @@ class Data(object):
         self.test_data = rand_indices[1000:]
         self.test_labels = Variable(torch.LongTensor(self.labels[np.array(self.test_data)]))
 
+        # create ``num_folds`` stratified samples
         ss = StratifiedShuffleSplit(n_splits=num_folds, test_size=0.20, random_state=42)
-
         train_indices = rand_indices[:1000]
         for train_index, valid_index in ss.split(self.features[train_indices], self.labels[train_indices]):
             self.train_data.append(train_index)
@@ -33,6 +34,11 @@ class Data(object):
 
             self.valid_data.append(valid_index)
             self.valid_labels.append(Variable(torch.LongTensor(self.labels[np.array(valid_index)])))
+
+        # build priority list sorted by in-degree in descending order
+        dim = len(self.adj_lists)
+        id_degree_mat = [[x, len(self.adj_lists[x])] for x in range(dim)]
+        self.priority_list = np.array(sorted(id_degree_mat, key=lambda x: x[1], reverse=True))[:, 0]
 
     @staticmethod
     def load_cora():
