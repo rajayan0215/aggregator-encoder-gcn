@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from comet_ml import Experiment
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, precision_recall_fscore_support, confusion_matrix
 
 from graphsage.data import Data
 from graphsage.layers import Encoder
@@ -42,7 +42,9 @@ def run(param, data_loader):
                                  lr=param["learning_rate"],
                                  lambd=param["lr_decay"])
 
+    accuracy = 0
     times = []
+    scores = []
 
     for f in range(param["num_folds"]):
         time_start = time.time()
@@ -61,12 +63,37 @@ def run(param, data_loader):
 
         val_out = model.forward(data.valid_data[f])
 
+        scores.append(
+            precision_recall_fscore_support(data.valid_labels[f].data.numpy(), val_out.data.numpy().argmax(axis=1)))
+
+        accuracy += loss.data[0]
+
         print(f, loss.data[0],
               f1_score(data.valid_labels[f].data.numpy(), val_out.data.numpy().argmax(axis=1), average="micro"))
 
+    # classify test vertices
     test_out = model.forward(data.test_data)
-    print("Test F1:", f1_score(data.test_labels.data.numpy(), test_out.data.numpy().argmax(axis=1), average="micro"))
-    print("Average batch time:", np.mean(times))
+
+    print(1.0 * accuracy / param["num_folds"])
+    print_report(scores, param["num_classes"], param["num_folds"])
+    print("Average batch training time:", np.mean(times))
+    print(">> Test Evaluation")
+    print("F1 Score:", f1_score(data.test_labels.data.numpy(), test_out.data.numpy().argmax(axis=1), average="micro"))
+    print("Confusion Matrix\n", confusion_matrix(data.test_labels.data.numpy(), test_out.data.numpy().argmax(axis=1)))
+
+
+def print_report(scores, num_classes, num_folds):
+    precision = recall = f1 = support = [0] * num_classes
+
+    for score in scores:
+        for c in range(num_classes):
+            precision[c] = score[0][c]
+            recall[c] = score[1][c]
+            f1[c] = score[2][c]
+            support[c] = score[3][c]
+
+    for c in range(num_classes):
+        print("Class %d averages [p: %f, r: %f, f1: %f, s: %f]" % (c, precision[c]/num_folds, recall[c]/num_folds, f1[c]/num_folds, support[c]/num_folds))
 
 
 if __name__ == "__main__":
@@ -85,6 +112,19 @@ if __name__ == "__main__":
         "lr_decay": 0.005
     }
 
+    param_citeseer = {
+        "num_classes": 6,
+        "num_nodes": 3312,
+        "num_features": 3703,
+        "num_folds": 100,
+        "dim1": 128,
+        "dim2": 128,
+        "sample1": 10,
+        "sample2": 5,
+        "learning_rate": 0.4,
+        "lr_decay": 0.015
+    }
+
     param_pubmed = {
         "num_classes": 3,
         "num_nodes": 19717,
@@ -92,12 +132,14 @@ if __name__ == "__main__":
         "num_folds": 100,
         "dim1": 128,
         "dim2": 128,
-        "sample1": 10,
-        "sample2": 25,
-        "learning_rate": 0.8,
+        "sample1": 15,
+        "sample2": 10,
+        "learning_rate": 0.5,
         "lr_decay": 0.005
     }
 
     run(param_cora, Data.load_cora)
+
+    # run(param_citeseer, Data.load_citeseer)
 
     # run(param_pubmed, Data.load_pubmed)

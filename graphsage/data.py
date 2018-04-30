@@ -14,6 +14,8 @@ class Data(object):
     def __init__(self, data_loader, num_nodes, num_folds):
         rand_indices = np.random.permutation(num_nodes)
 
+        cutoff = int(num_nodes * 0.2)
+
         self.features, self.labels, self.adj_lists = data_loader()
 
         self.train_data = []
@@ -22,12 +24,12 @@ class Data(object):
         self.valid_data = []
         self.valid_labels = []
 
-        self.test_data = rand_indices[1000:]
+        self.test_data = rand_indices[cutoff:]
         self.test_labels = Variable(torch.LongTensor(self.labels[np.array(self.test_data)]))
 
         # create ``num_folds`` stratified samples
         ss = StratifiedShuffleSplit(n_splits=num_folds, test_size=0.20, random_state=42)
-        train_indices = rand_indices[:1000]
+        train_indices = rand_indices[:cutoff]
         for train_index, valid_index in ss.split(self.features[train_indices], self.labels[train_indices]):
             self.train_data.append(train_index)
             self.train_labels.append(Variable(torch.LongTensor(self.labels[np.array(train_index)])))
@@ -95,4 +97,32 @@ class Data(object):
                 paper2 = node_map[info[-1].split(":")[1]]
                 adj_lists[paper1].add(paper2)
                 adj_lists[paper2].add(paper1)
+        return feat_data, labels, adj_lists
+
+    @staticmethod
+    def load_citeseer():
+        num_nodes = 3312
+        num_feats = 3703
+        feat_data = np.zeros((num_nodes, num_feats))
+        labels = np.empty((num_nodes, 1), dtype=np.int64)
+        node_map = {}
+        label_map = {}
+        with open("citeseer/citeseer.content") as fp:
+            for i, line in enumerate(fp):
+                info = line.strip().split()
+                feat_data[i, :] = list(map(float, info[1:-1]))
+                node_map[info[0]] = i
+                if not info[-1] in label_map:
+                    label_map[info[-1]] = len(label_map)
+                labels[i] = label_map[info[-1]]
+
+        adj_lists = defaultdict(set)
+        with open("citeseer/citeseer.cites") as fp:
+            for i, line in enumerate(fp):
+                info = line.strip().split()
+                paper1 = node_map.get(info[0], None)
+                paper2 = node_map.get(info[1], None)
+                if paper1 is not None and paper2 is not None:
+                    adj_lists[paper1].add(paper2)
+                    adj_lists[paper2].add(paper1)
         return feat_data, labels, adj_lists
