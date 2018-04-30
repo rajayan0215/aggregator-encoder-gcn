@@ -4,6 +4,7 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
+import graphsage.sampler as smp
 from comet_ml import Experiment
 from sklearn.metrics import f1_score, precision_recall_fscore_support, confusion_matrix
 
@@ -29,11 +30,13 @@ def run(param, data_loader):
     features.weight = nn.Parameter(torch.FloatTensor(data.features), requires_grad=False)
 
     # layer 1
-    agg1 = MeanAggregator(features, data.priority_list, param["sample1"], cuda=True)
+    sam1 = smp.PrioritySampler(data.priority_list, param["sample1"])
+    agg1 = MeanAggregator(features, sam1, cuda=True)
     enc1 = Encoder(data.adj_lists, agg1, features.embedding_dim, param["dim1"])
 
     # layer 2
-    agg2 = MeanAggregator(lambda nodes: enc1(nodes).t(), data.priority_list, param["sample2"])
+    sam2 = smp.RandomSampler(param["sample2"])
+    agg2 = MeanAggregator(lambda nodes: enc1(nodes).t(), sam2)
     enc2 = Encoder(data.adj_lists, agg2, enc1.embedding_dim, param["dim2"], base_model=enc1)
 
     model = SupervisedGraphSage(param["num_classes"], enc2)
@@ -106,8 +109,8 @@ if __name__ == "__main__":
         "num_folds": 100,
         "dim1": 128,
         "dim2": 128,
-        "sample1": 7,
-        "sample2": 4,
+        "sample1": 5,
+        "sample2": 5,
         "learning_rate": 0.5,
         "lr_decay": 0.005
     }
@@ -132,8 +135,8 @@ if __name__ == "__main__":
         "num_folds": 100,
         "dim1": 128,
         "dim2": 128,
-        "sample1": 15,
-        "sample2": 10,
+        "sample1": 10,
+        "sample2": 5,
         "learning_rate": 0.5,
         "lr_decay": 0.005
     }
