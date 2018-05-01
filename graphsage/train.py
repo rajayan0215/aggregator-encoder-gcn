@@ -30,12 +30,12 @@ def run(param, data_loader):
     features.weight = nn.Parameter(torch.FloatTensor(data.features), requires_grad=False)
 
     # layer 1
-    sam1 = smp.PrioritySampler(data.priority_list, param["sample1"])
+    sam1 = get_sampler(param["sampler1"], param["sample1"], data)
     agg1 = MeanAggregator(features, sam1, cuda=True)
     enc1 = Encoder(data.adj_lists, agg1, features.embedding_dim, param["dim1"])
 
     # layer 2
-    sam2 = smp.RandomSampler(param["sample2"])
+    sam2 = get_sampler(param["sampler2"], param["sample2"], data)
     agg2 = MeanAggregator(lambda nodes: enc1(nodes).t(), sam2)
     enc2 = Encoder(data.adj_lists, agg2, enc1.embedding_dim, param["dim2"], base_model=enc1)
 
@@ -45,7 +45,6 @@ def run(param, data_loader):
                                  lr=param["learning_rate"],
                                  lambd=param["lr_decay"])
 
-    accuracy = 0
     times = []
     scores = []
 
@@ -69,20 +68,26 @@ def run(param, data_loader):
         scores.append(
             precision_recall_fscore_support(data.valid_labels[f].data.numpy(), val_out.data.numpy().argmax(axis=1)))
 
-        accuracy += loss.data[0]
-
         print(f, loss.data[0],
               f1_score(data.valid_labels[f].data.numpy(), val_out.data.numpy().argmax(axis=1), average="micro"))
 
     # classify test vertices
     test_out = model.forward(data.test_data)
 
-    print(1.0 * accuracy / param["num_folds"])
-    print_report(scores, param["num_classes"], param["num_folds"])
+    # print_report(scores, param["num_classes"], param["num_folds"])
     print("Average batch training time:", np.mean(times))
     print(">> Test Evaluation")
     print("F1 Score:", f1_score(data.test_labels.data.numpy(), test_out.data.numpy().argmax(axis=1), average="micro"))
     print("Confusion Matrix\n", confusion_matrix(data.test_labels.data.numpy(), test_out.data.numpy().argmax(axis=1)))
+
+
+def get_sampler(sampler_name, num_samples, data):
+    if sampler_name == "priority":
+        return smp.PrioritySampler(data.priority_list, num_samples)
+    elif sampler_name == "hybrid":
+        return smp.HybridSampler(data.priority_list, num_samples)
+    else:
+        return smp.RandomSampler(num_samples)
 
 
 def print_report(scores, num_classes, num_folds):
@@ -109,8 +114,10 @@ if __name__ == "__main__":
         "num_folds": 100,
         "dim1": 128,
         "dim2": 128,
-        "sample1": 5,
-        "sample2": 5,
+        "sampler1": "priority",
+        "sampler2": "random",
+        "sample1": 7,
+        "sample2": 4,
         "learning_rate": 0.5,
         "lr_decay": 0.005
     }
@@ -122,6 +129,8 @@ if __name__ == "__main__":
         "num_folds": 100,
         "dim1": 128,
         "dim2": 128,
+        "sampler1": "priority",
+        "sampler2": "random",
         "sample1": 10,
         "sample2": 5,
         "learning_rate": 0.4,
@@ -135,6 +144,8 @@ if __name__ == "__main__":
         "num_folds": 100,
         "dim1": 128,
         "dim2": 128,
+        "sampler1": "priority",
+        "sampler2": "random",
         "sample1": 10,
         "sample2": 5,
         "learning_rate": 0.5,

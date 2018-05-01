@@ -25,7 +25,7 @@ class RandomSampler:
         # local function pointers as a speed hack
         _set = set
         _sample = random.sample
-        has_black_list = len(black_list) == 0
+        has_black_list = len(black_list) <= 0
 
         result = []
         for i in range(len(neighbourhoods)):
@@ -90,11 +90,11 @@ class PrioritySampler:
         """
         # local function pointers as a speed hack
         _set = set
-        has_black_list = len(black_list) == 0
+        no_exceptions = len(black_list) <= 0
 
         result = []
         for i in range(len(neighbourhoods)):
-            neighbourhood = _set(neighbourhoods[i]) if has_black_list else _set(neighbourhoods[i]) - _set(black_list[i])
+            neighbourhood = _set(neighbourhoods[i]) if no_exceptions else _set(neighbourhoods[i]) - _set(black_list[i])
             result.append(self.pick(neighbourhood) if self.num_samples < len(neighbourhood) else neighbourhood)
 
         return result

@@ -14,7 +14,8 @@ class Data(object):
     def __init__(self, data_loader, num_nodes, num_folds):
         rand_indices = np.random.permutation(num_nodes)
 
-        cutoff = int(num_nodes * 0.2)
+        # cutoff = int(num_nodes * 0.2)
+        cutoff = 1000
 
         self.features, self.labels, self.adj_lists = data_loader()
 
@@ -24,12 +25,12 @@ class Data(object):
         self.valid_data = []
         self.valid_labels = []
 
-        self.test_data = rand_indices[cutoff:]
+        self.test_data = rand_indices[:cutoff]
         self.test_labels = Variable(torch.LongTensor(self.labels[np.array(self.test_data)]))
 
         # create ``num_folds`` stratified samples
         ss = StratifiedShuffleSplit(n_splits=num_folds, test_size=0.20, random_state=42)
-        train_indices = rand_indices[:cutoff]
+        train_indices = rand_indices[cutoff:]
         for train_index, valid_index in ss.split(self.features[train_indices], self.labels[train_indices]):
             self.train_data.append(train_index)
             self.train_labels.append(Variable(torch.LongTensor(self.labels[np.array(train_index)])))
