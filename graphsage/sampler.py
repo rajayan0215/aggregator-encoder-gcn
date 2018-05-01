@@ -1,6 +1,15 @@
 import random
 
 
+def get(sampler_name, num_samples, data):
+    if sampler_name == "priority":
+        return PrioritySampler(data.priority_list, num_samples)
+    elif sampler_name == "hybrid":
+        return HybridSampler(data.priority_list, num_samples)
+    else:
+        return RandomSampler(num_samples)
+
+
 class RandomSampler:
 
     def __init__(self, num_samples=10):

@@ -1,17 +1,18 @@
 import random
 import time
+from math import ceil
 
 import numpy as np
 import torch
 import torch.nn as nn
-import graphsage.sampler as smp
-from comet_ml import Experiment
+import graphsage.sampler as sampler
 from sklearn.metrics import f1_score, precision_recall_fscore_support, confusion_matrix
 
+from graphsage.aggregator import MeanAggregator
 from graphsage.data import Data
 from graphsage.layers import Encoder
-from graphsage.aggregator import MeanAggregator
 from graphsage.model import SupervisedGraphSage
+from graphsage.param import Param
 
 """
 Simple supervised GraphSAGE model as well as examples running the model
@@ -30,12 +31,12 @@ def run(param, data_loader):
     features.weight = nn.Parameter(torch.FloatTensor(data.features), requires_grad=False)
 
     # layer 1
-    sam1 = get_sampler(param["sampler1"], param["sample1"], data)
+    sam1 = sampler.get(param["sampler1"], param["sample1"], data)
     agg1 = MeanAggregator(features, sam1, cuda=True)
     enc1 = Encoder(data.adj_lists, agg1, features.embedding_dim, param["dim1"])
 
     # layer 2
-    sam2 = get_sampler(param["sampler2"], param["sample2"], data)
+    sam2 = sampler.get(param["sampler2"], param["sample2"], data)
     agg2 = MeanAggregator(lambda nodes: enc1(nodes).t(), sam2)
     enc2 = Encoder(data.adj_lists, agg2, enc1.embedding_dim, param["dim2"], base_model=enc1)
 
@@ -45,115 +46,69 @@ def run(param, data_loader):
                                  lr=param["learning_rate"],
                                  lambd=param["lr_decay"])
 
-    times = []
+    times_fold = []
+    times_batch = []
     scores = []
+    batch_size = param["batch_size"]
+    num_batches = ceil(len(data.train_labels[0]) / batch_size)
 
     for f in range(param["num_folds"]):
-        time_start = time.time()
+        f_time_start = time.time()
 
         optimizer.zero_grad()
 
-        loss = model.loss(data.train_data[f], data.train_labels[f])
+        batch = 1
+        while len(data.train_labels[f]) > 0:
+            b_time_start = time.time()
 
-        loss.backward()
+            loss = model.loss(data.train_data[f][:batch_size], data.train_labels[f][:batch_size])
 
-        optimizer.step()
+            loss.backward()
 
-        time_end = time.time()
+            optimizer.step()
 
-        times.append(time_end - time_start)
+            if len(data.train_data[f]) < batch_size:
+                break
+
+            data.train_data[f] = data.train_data[f][batch_size:]
+
+            data.train_labels[f] = data.train_labels[f][batch_size:]
+
+            b_time_end = time.time()
+
+            times_batch.append(b_time_end - b_time_start)
+
+            print("Finishing batch {0} of {1}\r".format(batch, num_batches), end="")
+
+            batch = batch + 1
+
+        f_time_end = time.time()
+
+        times_fold.append(f_time_end - f_time_start)
 
         val_out = model.forward(data.valid_data[f])
 
         scores.append(
             precision_recall_fscore_support(data.valid_labels[f].data.numpy(), val_out.data.numpy().argmax(axis=1)))
 
-        print(f, loss.data[0],
-              f1_score(data.valid_labels[f].data.numpy(), val_out.data.numpy().argmax(axis=1), average="micro"))
+        print("Epoch", f, f1_score(data.valid_labels[f].data.numpy(), val_out.data.numpy().argmax(axis=1), average="micro"))
 
     # classify test vertices
     test_out = model.forward(data.test_data)
 
     # print_report(scores, param["num_classes"], param["num_folds"])
-    print("Average batch training time:", np.mean(times))
+    print("Average epoch-training time:", np.mean(times_fold))
+    print("Average batch-training time:", np.mean(times_batch))
     print(">> Test Evaluation")
     print("F1 Score:", f1_score(data.test_labels.data.numpy(), test_out.data.numpy().argmax(axis=1), average="micro"))
     print("Confusion Matrix\n", confusion_matrix(data.test_labels.data.numpy(), test_out.data.numpy().argmax(axis=1)))
 
 
-def get_sampler(sampler_name, num_samples, data):
-    if sampler_name == "priority":
-        return smp.PrioritySampler(data.priority_list, num_samples)
-    elif sampler_name == "hybrid":
-        return smp.HybridSampler(data.priority_list, num_samples)
-    else:
-        return smp.RandomSampler(num_samples)
-
-
-def print_report(scores, num_classes, num_folds):
-    precision = recall = f1 = support = [0] * num_classes
-
-    for score in scores:
-        for c in range(num_classes):
-            precision[c] = score[0][c]
-            recall[c] = score[1][c]
-            f1[c] = score[2][c]
-            support[c] = score[3][c]
-
-    for c in range(num_classes):
-        print("Class %d averages [p: %f, r: %f, f1: %f, s: %f]" % (c, precision[c]/num_folds, recall[c]/num_folds, f1[c]/num_folds, support[c]/num_folds))
-
-
 if __name__ == "__main__":
-    experiment = Experiment(api_key="T89lpyGziH2MDRAfdJ0G0LpSr", project_name="inductivegcn")
+    # disabling comet.ml
+    # experiment = Experiment(api_key="T89lpyGziH2MDRAfdJ0G0LpSr", project_name="scalablegcn")
 
-    param_cora = {
-        "num_classes": 7,
-        "num_nodes": 2708,
-        "num_features": 1433,
-        "num_folds": 100,
-        "dim1": 128,
-        "dim2": 128,
-        "sampler1": "priority",
-        "sampler2": "random",
-        "sample1": 7,
-        "sample2": 4,
-        "learning_rate": 0.5,
-        "lr_decay": 0.005
-    }
+    run(Param.cora, Data.load_cora)
+    #run(Param.citeseer, Data.load_citeseer)
+    #run(Param.pubmed, Data.load_pubmed)
 
-    param_citeseer = {
-        "num_classes": 6,
-        "num_nodes": 3312,
-        "num_features": 3703,
-        "num_folds": 100,
-        "dim1": 128,
-        "dim2": 128,
-        "sampler1": "priority",
-        "sampler2": "random",
-        "sample1": 10,
-        "sample2": 5,
-        "learning_rate": 0.4,
-        "lr_decay": 0.015
-    }
-
-    param_pubmed = {
-        "num_classes": 3,
-        "num_nodes": 19717,
-        "num_features": 500,
-        "num_folds": 100,
-        "dim1": 128,
-        "dim2": 128,
-        "sampler1": "priority",
-        "sampler2": "random",
-        "sample1": 10,
-        "sample2": 5,
-        "learning_rate": 0.5,
-        "lr_decay": 0.005
-    }
-
-    run(param_cora, Data.load_cora)
-
-    # run(param_citeseer, Data.load_citeseer)
-
-    # run(param_pubmed, Data.load_pubmed)
