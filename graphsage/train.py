@@ -59,6 +59,8 @@ def run(param, data_loader):
 
         batch = 1
         while len(data.train_labels[f]) > 0:
+            print("Starting batch {0} of {1}\r".format(batch, num_batches), end="")
+
             b_time_start = time.time()
 
             loss = model.loss(data.train_data[f][:batch_size], data.train_labels[f][:batch_size])
@@ -77,8 +79,6 @@ def run(param, data_loader):
             b_time_end = time.time()
 
             times_batch.append(b_time_end - b_time_start)
-
-            print("Finishing batch {0} of {1}\r".format(batch, num_batches), end="")
 
             batch = batch + 1
 
@@ -108,7 +108,10 @@ if __name__ == "__main__":
     # disabling comet.ml
     # experiment = Experiment(api_key="T89lpyGziH2MDRAfdJ0G0LpSr", project_name="scalablegcn")
 
-    run(Param.cora, Data.load_cora)
-    #run(Param.citeseer, Data.load_citeseer)
-    #run(Param.pubmed, Data.load_pubmed)
+    # run(Param.cora, Data.load_cora)
+    run(Param.citeseer, Data.load_citeseer)
+    run(Param.citeseer_rand, Data.load_citeseer)
+    run(Param.citeseer_imp, Data.load_citeseer)
+    run(Param.citeseer_hybd, Data.load_citeseer)
+    # run(Param.pubmed, Data.load_pubmed)
 
