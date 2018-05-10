@@ -1,12 +1,14 @@
 class Param:
     cora = {
+        "dataset": "cora",
+        "sampling": "mixed",
         "num_classes": 7,
         "num_nodes": 2708,
         "num_features": 1433,
-        "num_folds": 10,
-        "dim1": 128,
+        "num_folds": 20,
+        "dim1": 512,
         "dim2": 128,
-        "sampler1": "priority",
+        "sampler1": "hybrid",
         "sampler2": "random",
         "sample1": 7,
         "sample2": 4,
@@ -16,11 +18,13 @@ class Param:
     }
 
     citeseer = {
+        "dataset": "citeseer",
+        "sampling": "mixed",
         "num_classes": 6,
         "num_nodes": 3312,
         "num_features": 3703,
         "num_folds": 20,
-        "dim1": 128,
+        "dim1": 512,
         "dim2": 128,
         "sampler1": "hybrid",
         "sampler2": "random",
@@ -32,13 +36,15 @@ class Param:
     }
 
     pubmed = {
+        "dataset": "pubmed",
+        "sampling": "mixed",
         "num_classes": 3,
         "num_nodes": 19717,
         "num_features": 500,
-        "num_folds": 10,
-        "dim1": 128,
+        "num_folds": 20,
+        "dim1": 512,
         "dim2": 128,
-        "sampler1": "priority",
+        "sampler1": "hybrid",
         "sampler2": "random",
         "sample1": 10,
         "sample2": 5,
@@ -48,10 +54,12 @@ class Param:
     }
 
     cora_imp = {
+        "dataset": "cora",
+        "sampling": "importance",
         "num_classes": 7,
         "num_nodes": 2708,
         "num_features": 1433,
-        "num_folds": 10,
+        "num_folds": 20,
         "dim1": 128,
         "dim2": 128,
         "sampler1": "priority",
@@ -64,6 +72,8 @@ class Param:
     }
 
     citeseer_imp = {
+        "dataset": "citeseer",
+        "sampling": "importance",
         "num_classes": 6,
         "num_nodes": 3312,
         "num_features": 3703,
@@ -80,10 +90,12 @@ class Param:
     }
 
     pubmed_imp = {
+        "dataset": "pubmed",
+        "sampling": "importance",
         "num_classes": 3,
         "num_nodes": 19717,
         "num_features": 500,
-        "num_folds": 10,
+        "num_folds": 20,
         "dim1": 128,
         "dim2": 128,
         "sampler1": "priority",
@@ -96,10 +108,12 @@ class Param:
     }
 
     cora_rand = {
+        "dataset": "cora",
+        "sampling": "random",
         "num_classes": 7,
         "num_nodes": 2708,
         "num_features": 1433,
-        "num_folds": 10,
+        "num_folds": 20,
         "dim1": 128,
         "dim2": 128,
         "sampler1": "random",
@@ -112,6 +126,8 @@ class Param:
     }
 
     citeseer_rand = {
+        "dataset": "citeseer",
+        "sampling": "random",
         "num_classes": 6,
         "num_nodes": 3312,
         "num_features": 3703,
@@ -128,10 +144,12 @@ class Param:
     }
 
     pubmed_rand = {
+        "dataset": "pubmed",
+        "sampling": "random",
         "num_classes": 3,
         "num_nodes": 19717,
         "num_features": 500,
-        "num_folds": 10,
+        "num_folds": 20,
         "dim1": 128,
         "dim2": 128,
         "sampler1": "random",
@@ -144,10 +162,12 @@ class Param:
     }
 
     cora_hybd = {
+        "dataset": "cora",
+        "sampling": "hybrid",
         "num_classes": 7,
         "num_nodes": 2708,
         "num_features": 1433,
-        "num_folds": 10,
+        "num_folds": 20,
         "dim1": 128,
         "dim2": 128,
         "sampler1": "hybrid",
@@ -160,6 +180,8 @@ class Param:
     }
 
     citeseer_hybd = {
+        "dataset": "citeseer",
+        "sampling": "hybrid",
         "num_classes": 6,
         "num_nodes": 3312,
         "num_features": 3703,
@@ -176,10 +198,12 @@ class Param:
     }
 
     pubmed_hybd = {
+        "dataset": "pubmed",
+        "sampling": "hybrid",
         "num_classes": 3,
         "num_nodes": 19717,
         "num_features": 500,
-        "num_folds": 10,
+        "num_folds": 20,
         "dim1": 128,
         "dim2": 128,
         "sampler1": "hybrid",
