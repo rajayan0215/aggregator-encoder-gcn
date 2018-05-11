@@ -1,5 +1,5 @@
 class Param:
-    cora = {
+    cora_mixed = {
         "dataset": "cora",
         "sampling": "mixed",
         "num_classes": 7,
@@ -17,7 +17,7 @@ class Param:
         "batch_size": 256
     }
 
-    citeseer = {
+    citeseer_mixed = {
         "dataset": "citeseer",
         "sampling": "mixed",
         "num_classes": 6,
@@ -35,7 +35,7 @@ class Param:
         "batch_size": 256
     }
 
-    pubmed = {
+    pubmed_mixed = {
         "dataset": "pubmed",
         "sampling": "mixed",
         "num_classes": 3,
@@ -53,7 +53,7 @@ class Param:
         "batch_size": 1024
     }
 
-    cora_imp = {
+    cora_priority = {
         "dataset": "cora",
         "sampling": "importance",
         "num_classes": 7,
@@ -71,7 +71,7 @@ class Param:
         "batch_size": 256
     }
 
-    citeseer_imp = {
+    citeseer_priority = {
         "dataset": "citeseer",
         "sampling": "importance",
         "num_classes": 6,
@@ -89,7 +89,7 @@ class Param:
         "batch_size": 256
     }
 
-    pubmed_imp = {
+    pubmed_priority = {
         "dataset": "pubmed",
         "sampling": "importance",
         "num_classes": 3,

@@ -108,10 +108,16 @@ if __name__ == "__main__":
     # disabling comet.ml
     # experiment = Experiment(api_key="T89lpyGziH2MDRAfdJ0G0LpSr", project_name="scalablegcn")
 
-    # run(Param.cora, Data.load_cora)
-    run(Param.citeseer, Data.load_citeseer)
-    run(Param.citeseer_rand, Data.load_citeseer)
-    run(Param.citeseer_imp, Data.load_citeseer)
+    #run(Param.cora_mixed, Data.load_cora)
+    #run(Param.cora_rand, Data.load_cora)
+    run(Param.cora_priority, Data.load_cora)
+    #run(Param.cora_hybd, Data.load_cora)
+    #run(Param.citeseer, Data.load_citeseer)
+    #run(Param.citeseer_rand, Data.load_citeseer)
+    #run(Param.citeseer_imp, Data.load_citeseer)
     run(Param.citeseer_hybd, Data.load_citeseer)
-    # run(Param.pubmed, Data.load_pubmed)
-
+    #run(Param.citeseer_mixed, Data.load_citeseer)
+    #run(Param.pubmed_imp, Data.load_pubmed)
+    #run(Param.pubmed_rand, Data.load_pubmed)
+    #run(Param.pubmed_mixed, Data.load_pubmed)
+    run(Param.pubmed_hybd, Data.load_pubmed)
