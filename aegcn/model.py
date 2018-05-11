@@ -3,13 +3,13 @@ import torch.nn as nn
 from torch.nn import init
 
 
-class SupervisedGraphSage(nn.Module):
+class AggEncGCN(nn.Module):
     """
-    Simple supervised GraphSAGE model using CE loss
+    Simple supervised AEGCN model using CE loss
     """
 
     def __init__(self, num_classes, encoder):
-        super(SupervisedGraphSage, self).__init__()
+        super(AggEncGCN, self).__init__()
         self.enc = encoder
         self.xent = nn.CrossEntropyLoss()
 

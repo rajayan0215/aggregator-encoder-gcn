@@ -5,17 +5,17 @@ from math import ceil
 import numpy as np
 import torch
 import torch.nn as nn
-import graphsage.sampler as sampler
+import aegcn.sampler as sampler
 from sklearn.metrics import f1_score, precision_recall_fscore_support, confusion_matrix
 
-from graphsage.aggregator import MeanAggregator
-from graphsage.data import Data
-from graphsage.layers import Encoder
-from graphsage.model import SupervisedGraphSage
-from graphsage.param import Param
+from aegcn.aggregator import MeanAggregator
+from aegcn.data import Data
+from aegcn.layers import Encoder
+from aegcn.model import AggEncGCN
+from aegcn.param import Param
 
 """
-Simple supervised GraphSAGE model as well as examples running the model
+Simple supervised AEGCN model as well as examples running the model
 on the Cora and Pubmed datasets.
 """
 
@@ -40,7 +40,7 @@ def run(param, data_loader):
     agg2 = MeanAggregator(lambda nodes: enc1(nodes).t(), sam2)
     enc2 = Encoder(data.adj_lists, agg2, enc1.embedding_dim, param["dim2"], base_model=enc1)
 
-    model = SupervisedGraphSage(param["num_classes"], enc2)
+    model = AggEncGCN(param["num_classes"], enc2)
 
     optimizer = torch.optim.ASGD(filter(lambda p: p.requires_grad, model.parameters()),
                                  lr=param["learning_rate"],
