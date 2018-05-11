@@ -7,6 +7,6 @@ pytorch >0.2 is required.
 
 
 #### Running examples
-Execute `python3 graphsage/train.py` to run the the tests for all three datasets
+Execute `python3 aegcn/train.py` to run the the tests for all three datasets
 
 
